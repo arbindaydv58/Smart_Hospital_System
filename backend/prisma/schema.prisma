@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//////////////////// ENUMS ////////////////////
+
+enum Role {
+  ADMIN
+  DOCTOR
+  PATIENT
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AppointmentStatus {
+  BOOKED
+  CANCELLED
+  COMPLETED
+}
+
+enum QueueStatus {
+  WAITING
+  CALLED
+  IN_PROGRESS
+  DONE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum NotificationStatus {
+  READ
+  UNREAD
+}
+
+enum Day {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+//////////////////// MODELS ////////////////////
+
+model User {
+  id               Int         @id @default(autoincrement())
+  name             String
+  email            String      @unique
+  password         String
+  phone            String?
+  role             Role        @default(PATIENT)
+  status           UserStatus  @default(INACTIVE)
+  profileImage     Json?
+  activationToken  String?
+  tokenExpiry      DateTime?
+
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  patient          Patient?
+  doctor           Doctor?
+
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  payments         Payment[]
+}
+
+model Patient {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique
+  age        Int?
+  gender     String?
+  address    String?
+  bloodGroup String?
+
+  user         User         @relation(fields: [userId], references: [id])
+  appointments Appointment[]
+  reviews      Review[]     @relation("PatientReviews")
+}
+
+model Doctor {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  specialization  String
+  experience      Int?
+  consultationFee Float?
+  departmentId    Int
+
+  user         User            @relation(fields: [userId], references: [id])
+  department   Department      @relation(fields: [departmentId], references: [id])
+  schedules    DoctorSchedule[]
+  appointments Appointment[]
+  prescriptions Prescription[]
+  reviews       Review[]        @relation("DoctorReviews")
+}
+
+model Department {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+
+  doctors      Doctor[]
+  appointments Appointment[]
+}
+
+model Appointment {
+  id           Int                @id @default(autoincrement())
+  patientId    Int
+  doctorId     Int
+  departmentId Int
+
+  startTime    DateTime
+  endTime      DateTime
+
+  status       AppointmentStatus @default(BOOKED)
+  reason       String?
+
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  patient      Patient    @relation(fields: [patientId], references: [id])
+  doctor       Doctor     @relation(fields: [doctorId], references: [id])
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  queue        Queue?
+  prescription Prescription?
+  payment      Payment?
+
+  @@index([doctorId, startTime])
+}
+
+model Queue {
+  id            Int         @id @default(autoincrement())
+  appointmentId Int         @unique
+
+  queueNumber   Int
+  status        QueueStatus @default(WAITING)
+  estimatedTime Int?
+  priority      Int         @default(0)
+
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+}
+
+model DoctorSchedule {
+  id        Int    @id @default(autoincrement())
+  doctorId  Int
+  day       Day
+
+  startTime String
+  endTime   String
+
+  doctor    Doctor @relation(fields: [doctorId], references: [id])
+}
+
+model Prescription {
+  id            Int      @id @default(autoincrement())
+  appointmentId Int      @unique
+  doctorId      Int
+  notes         String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  doctor        Doctor      @relation(fields: [doctorId], references: [id])
+
+  medicines     Medicine[]
+}
+
+model Medicine {
+  id             Int @id @default(autoincrement())
+  prescriptionId Int
+
+  name       String
+  dosage     String
+  frequency  String
+  duration   String?
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+}
+
+model Notification {
+  id        Int                @id @default(autoincrement())
+  userId    Int
+  type      String
+  message   String
+  status    NotificationStatus @default(UNREAD)
+
+  createdAt DateTime @default(now())
+
+  user      User @relation(fields: [userId], references: [id])
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  patientId  Int
+  doctorId   Int
+  rating     Int
+  comment    String?
+
+  createdAt  DateTime @default(now())
+
+  patient    Patient @relation("PatientReviews", fields: [patientId], references: [id])
+  doctor     Doctor  @relation("DoctorReviews", fields: [doctorId], references: [id])
+
+  @@unique([patientId, doctorId])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  action    String
+  entity    String
+  entityId  Int?
+
+  createdAt DateTime @default(now())
+
+  user      User @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  appointmentId Int           @unique
+  userId        Int
+
+  amount        Float
+  status        PaymentStatus @default(PENDING)
+  method        String?
+  transactionId String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+}
