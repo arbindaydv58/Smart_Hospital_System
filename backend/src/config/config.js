@@ -2,6 +2,6 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-export const env = {
+export const config = {
   DATABASE_URL: process.env.DATABASE_URL,
 };
