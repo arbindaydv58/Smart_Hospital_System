@@ -3,10 +3,9 @@ const router = express.Router();
 
 router.get("/health", (req,res) => {
   res.json({
-    status: "OK",
     message: "Success",
     status: "ok",
-    options: null,
+    data: null,
   });
 });
 
