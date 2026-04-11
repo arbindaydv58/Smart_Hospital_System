@@ -1,4 +1,5 @@
 import express from "express";
+import authRouter from "../modules/auth/auth.router.js";
 const router = express.Router();
 
 router.get("/health", (req,res) => {
@@ -8,5 +9,7 @@ router.get("/health", (req,res) => {
     data: null,
   });
 });
+
+router.use("/auth",authRouter)
 
 export default router;
