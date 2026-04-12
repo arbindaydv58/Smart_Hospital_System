@@ -1,20 +1,13 @@
-import fileUploadSvc from "../../service/fileupload.service.js";
+import AuthSvc from "./auth.service.js";
 
 class AuthController {
   registerUser = async (req, res, next) => {
     try {
-      const data = req.body;
-      let profileImage = null;
-
-      if (req.file?.path) {
-        profileImage = await fileUploadSvc.uploadFile(req.file.path, "/users");
-      }
+      const data = await AuthSvc.transformUserRegister(req);
+      const user = await AuthSvc.registerUser(data);
 
       res.json({
-        data: {
-          ...data,
-          profileImage,
-        },
+        data: AuthSvc.getPublicUser(user),
         message: "register sucess",
         status: "Ok",
         options: null,
