@@ -1,3 +1,4 @@
+import authMailSvc from "./auth.mail.js";
 import AuthSvc from "./auth.service.js";
 
 class AuthController {
@@ -5,6 +6,9 @@ class AuthController {
     try {
       const data = await AuthSvc.transformUserRegister(req);
       const user = await AuthSvc.registerUser(data);
+
+      //*SMTP Server
+      await authMailSvc.notifyUserRegistration(data)
 
       res.json({
         data: AuthSvc.getPublicUser(user),

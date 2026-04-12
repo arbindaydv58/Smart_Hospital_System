@@ -1,21 +1,9 @@
 import bcrypt from "bcryptjs";
 import fileUploadSvc from "../../service/fileupload.service.js";
 import AuthRepo from "./auth.respository.js";
+import { normalizeRole } from "../../utilities/helpers.js";
 
 class UserService {
-  normalizeRole(role) {
-    if (role === undefined || role === null || role === "") return "PATIENT";
-
-    const cleaned = String(role).replace(/^"+|"+$/g, "").trim().toUpperCase();
-    const allowed = new Set(["ADMIN", "DOCTOR", "PATIENT"]);
-
-    if (!allowed.has(cleaned)) {
-      throw { statusCode: 400, message: "invalid role" };
-    }
-
-    return cleaned;
-  }
-
   async transformUserRegister(req) {
     try {
       const data = req.body;
@@ -33,7 +21,7 @@ class UserService {
         );
       }
 
-      data.role = this.normalizeRole(data.role);
+      data.role = normalizeRole(data.role);
       data.password = await bcrypt.hash(data.password, 10);
 
       return data;
@@ -59,7 +47,7 @@ class UserService {
       email: user.email,
       role: user.role,
       status: user.status,
-      image: user?.profileImage?.thumbUrl, 
+      image: user?.profileImage?.thumbUrl,
     };
   }
 }
