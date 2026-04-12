@@ -1,7 +1,11 @@
 import bcrypt from "bcryptjs";
 import fileUploadSvc from "../../service/fileupload.service.js";
 import AuthRepo from "./auth.respository.js";
-import { normalizeRole } from "../../utilities/helpers.js";
+import {
+  normalizeRole,
+  randomStringGenerate,
+} from "../../utilities/helpers.js";
+import { UserStatus } from "@prisma/client";
 
 class UserService {
   async transformUserRegister(req) {
@@ -23,6 +27,9 @@ class UserService {
 
       data.role = normalizeRole(data.role);
       data.password = await bcrypt.hash(data.password, 10);
+      data.activationToken = randomStringGenerate(150);
+      data.tokenExpiry = new Date(Date.now() + 360000);
+      data.status = UserStatus.INACTIVE;
 
       return data;
     } catch (exception) {
@@ -38,6 +45,13 @@ class UserService {
       throw exception;
     }
   }
+
+  async getSingleRowByFilter(filter) {
+  return prisma
+  .user.findFirst({
+    where: filter,
+  });
+}
 
   //* Public Profile
   getPublicUser(user) {
