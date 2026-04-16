@@ -1,3 +1,4 @@
+import { randomStringGenerate } from "../../utilities/helpers.js";
 import authMailSvc from "./auth.mail.js";
 import AuthSvc from "./auth.service.js";
 
@@ -12,7 +13,7 @@ class AuthController {
 
       res.json({
         data: AuthSvc.getPublicUser(user),
-        message: "register sucess",
+        message: "Register success",
         status: "Ok",
         options: null,
       });
@@ -21,41 +22,60 @@ class AuthController {
     }
   };
 
+  // Activate user profile
   activateUserProfile = async (req, res, next) => {
     try {
-      const token = req.params.token;
+      let token = req.params.token;
 
-      const user = await userSvc.getSingleRowByFilter({
+      const user = await AuthSvc.getSingleRowByFilter({
         activationToken: token,
       });
 
       //  user not found
       if (!user) {
         throw {
-          statusCode: 400,
-          message: "Invalid or expired activation token",
+          statusCode: 422,
+          message: "User not found or invalid activation token",
+          status: "USER_NOT_FOUND",
         };
       }
 
-      // token expired
-      if (user.tokenExpiry < new Date()) {
-        throw {
-          statusCode: 400,
-          message: "Activation token has expired",
-        };
+      // expired token
+      const expiryTime = user.tokenExpiry
+        ? new Date(user.tokenExpiry).getTime()
+        : null;
+      const currentTime = Date.now();
+
+      if (!expiryTime || currentTime > expiryTime) {
+        const updatedUser = await AuthSvc.updateUser(user.id, {
+          activationToken: randomStringGenerate(150),
+          tokenExpiry: new Date(Date.now() + 360000),
+        });
+
+        await authMailSvc.notifyUserRegistration(updatedUser);
+        return res.json({
+          data: null,
+          message:
+            "Activation token expired. A new activation email has been sent.",
+          status: "RE-ACTIVATION_EMAIL_SENT",
+          options: null,
+        });
+      } else {
+        const updatedUser = await AuthSvc.updateUser(user.id, {
+          activationToken: null,
+          tokenExpiry: null,
+          status: "ACTIVE",
+        });
+
+        await authMailSvc.notifyUserActivationSuccess(updatedUser);
+        return res.json({
+          data: null,
+          message:
+            "Your account has been activated successfully. Please log in to continue.",
+          status: "ACTIVATION_SUCCESS",
+          options: null,
+        });
       }
-
-      // activate user
-      await userSvc.updateUser(user.id, {
-        status: "INACTIVE",
-        activationToken: null,
-        tokenExpiry: null,
-      });
-
-      res.json({
-        success: true,
-        message: "Account activated successfully",
-      });
     } catch (exception) {
       next(exception);
     }

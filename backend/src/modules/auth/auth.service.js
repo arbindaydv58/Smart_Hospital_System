@@ -6,6 +6,7 @@ import {
   randomStringGenerate,
 } from "../../utilities/helpers.js";
 import { UserStatus } from "@prisma/client";
+import prisma from "../../prisma/client.js";
 
 class UserService {
   async transformUserRegister(req) {
@@ -47,11 +48,17 @@ class UserService {
   }
 
   async getSingleRowByFilter(filter) {
-  return prisma
-  .user.findFirst({
-    where: filter,
-  });
-}
+    return prisma.user.findFirst({
+      where: filter,
+    });
+  }
+
+  async updateUser(id, data) {
+    return prisma.user.update({
+      where: { id },
+      data,
+    });
+  }
 
   //* Public Profile
   getPublicUser(user) {
